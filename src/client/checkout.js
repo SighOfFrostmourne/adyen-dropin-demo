@@ -18,12 +18,40 @@ function log(type, message, data) {
 }
 
 // ═════════════════════════════════════════════════════════════════════
+//  Amount / Currency helpers
+// ═════════════════════════════════════════════════════════════════════
+const currencySymbols = { CNY: '¥', EUR: '€', USD: '$', GBP: '£' };
+const currencyCountry  = { CNY: 'CN', EUR: 'NL', USD: 'US', GBP: 'GB' };
+
+function getAmountConfig() {
+  const currency   = document.getElementById('currency-select').value;
+  const majorUnits = parseFloat(document.getElementById('amount-input').value) || 0;
+  return {
+    currency,
+    value:      Math.round(majorUnits * 100),
+    countryCode: currencyCountry[currency] || 'US',
+    display:    `${currencySymbols[currency] || currency}${majorUnits.toFixed(2)}`,
+  };
+}
+
+function updatePriceDisplay() {
+  const { display } = getAmountConfig();
+  document.getElementById('item-price').textContent  = display;
+  document.getElementById('total-price').textContent = display;
+}
+
+document.getElementById('currency-select').addEventListener('change', updatePriceDisplay);
+document.getElementById('amount-input').addEventListener('input',  updatePriceDisplay);
+updatePriceDisplay();
+
+// ═════════════════════════════════════════════════════════════════════
 //  1. Create a payment session via our backend
 // ═════════════════════════════════════════════════════════════════════
 async function createSession() {
+  const { currency, value, countryCode } = getAmountConfig();
   const requestBody = {
-    amount: { currency: 'USD', value: 7100 }, // $71.00 in minor units
-    countryCode: 'US',
+    amount: { currency, value },
+    countryCode,
     shopperLocale: 'en_US',
   };
 
@@ -97,7 +125,18 @@ async function initCheckout() {
       },
     });
 
-    new Dropin(checkout).mount(container);
+    new Dropin(checkout, {
+      paymentMethodsConfiguration: {
+        card: {
+          styles: {
+            base:        { color: '#ffffff', fontSize: '15px', caretColor: '#ffffff' },
+            placeholder: { color: '#64748b' },
+            error:       { color: '#ffffff' },
+            validated:   { color: '#ffffff' },
+          },
+        },
+      },
+    }).mount(container);
     log('event', 'Drop-in mounted successfully');
   } catch (err) {
     console.error('Init failed:', err);
@@ -126,6 +165,14 @@ function handlePaymentResult(result) {
 }
 
 // ═════════════════════════════════════════════════════════════════════
-//  Boot
+//  Boot — wait for confirm button click
 // ═════════════════════════════════════════════════════════════════════
-initCheckout();
+document.getElementById('confirm-btn').addEventListener('click', () => {
+  const container = document.getElementById('dropin-container');
+  container.innerHTML = `
+    <div class="loader">
+      <div class="loader__spinner"></div>
+      <div class="loader__text">Creating payment session…</div>
+    </div>`;
+  initCheckout();
+});

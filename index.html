@@ -37,27 +37,27 @@
         <span class="order-total__price" id="total-price">$71.00</span>
       </div>
 
-      <!-- <div class="amount-selector">
+      <div class="amount-selector">
         <label>Payment amount (for testing)</label>
         <div class="amount-row">
           <select id="currency-select">
             <option value="CNY">CNY</option>
             <option value="EUR">EUR</option>
-            <option value="USD">USD</option>
+            <option value="USD" selected>USD</option>
             <option value="GBP">GBP</option>
           </select>
-          <input type="number" id="amount-input" value="100" min="1" step="1" placeholder="Amount" />
+          <input type="number" id="amount-input" value="71" min="1" step="1" placeholder="Amount" />
         </div>
-      </div> -->
+      </div>
     </div>
 
     <!-- Right: Adyen Drop-in -->
     <div class="panel">
       <div class="panel__title">Payment</div>
       <div id="dropin-container">
-        <div class="loader">
-          <div class="loader__spinner"></div>
-          <div class="loader__text">Initializing payment session…</div>
+        <div class="confirm-prompt">
+          <p class="confirm-prompt__text">Review your order and confirm to continue to payment.</p>
+          <button id="confirm-btn" class="btn-confirm">Confirm &amp; Pay</button>
         </div>
       </div>
     </div>
