@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@adyen/adyen-web/package.json'\\).version\\)\")",
+      "Bash(npm run *)",
+      "Bash(timeout 5 node src/server.js)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); console.log\\('MERCHANT:', process.env.ADYEN_MERCHANT_ACCOUNT\\)\")",
+      "Bash(node -e \"const r = require\\('dotenv'\\).config\\(\\); console.log\\('error:', r.error\\); console.log\\('parsed keys:', r.parsed ? Object.keys\\(r.parsed\\) : 'none'\\)\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const lines=fs.readFileSync\\('.env','utf8'\\).split\\('\\\\n'\\); lines.forEach\\(\\(l,i\\)=>console.log\\(i+1, JSON.stringify\\(l.substring\\(0,80\\)\\)\\)\\)\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const raw=fs.readFileSync\\('.env'\\); console.log\\('total bytes:', raw.length\\); const lines=raw.toString\\('utf8'\\).split\\('\\\\n'\\); console.log\\('lines:', lines.length\\); lines.forEach\\(\\(l,i\\)=>console.log\\(i+1, l.length, JSON.stringify\\(l.substring\\(0,120\\)\\)\\)\\)\")"
+    ]
+  }
+}

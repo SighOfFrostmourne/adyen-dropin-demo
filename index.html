@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — Adyen Drop-in Demo</title>
+  <link rel="icon" href="data:,">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles/base.css" />
+  <link rel="stylesheet" href="/styles/checkout.css" />
+  <link rel="stylesheet" href="/checkout.css" />
+</head>
+<body>
+
+  <div class="header">
+    <div class="header__logo">Adyen · Sessions Flow</div>
+    <h1 class="header__title">Checkout Demo</h1>
+  </div>
+
+  <div class="checkout-container">
+    <!-- Left: Order Summary -->
+    <div class="panel">
+      <div class="panel__title">Order Summary</div>
+
+      <div class="order-item">
+        <span class="order-item__name">Premium Widget × 1</span>
+        <span class="order-item__price" id="item-price">$71.00</span>
+      </div>
+      <div class="order-item">
+        <span class="order-item__name">Shipping</span>
+        <span class="order-item__price">Free</span>
+      </div>
+      <div class="order-total">
+        <span>Total</span>
+        <span class="order-total__price" id="total-price">$71.00</span>
+      </div>
+
+      <!-- <div class="amount-selector">
+        <label>Payment amount (for testing)</label>
+        <div class="amount-row">
+          <select id="currency-select">
+            <option value="CNY">CNY</option>
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+            <option value="GBP">GBP</option>
+          </select>
+          <input type="number" id="amount-input" value="100" min="1" step="1" placeholder="Amount" />
+        </div>
+      </div> -->
+    </div>
+
+    <!-- Right: Adyen Drop-in -->
+    <div class="panel">
+      <div class="panel__title">Payment</div>
+      <div id="dropin-container">
+        <div class="loader">
+          <div class="loader__spinner"></div>
+          <div class="loader__text">Initializing payment session…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom: Request/Response Log -->
+    <div class="panel log-panel">
+      <div class="panel__title">API Log (Requests &amp; Events)</div>
+      <ul class="log-panel__entries" id="log-entries"></ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    Demo integration — <a href="https://docs.adyen.com/online-payments/build-your-integration/sessions-flow/?platform=Web&integration=Drop-in" target="_blank">Adyen Sessions Flow Docs</a>
+  </div>
+
+<script src="/checkout.js"></script>
+
+</body>
+</html>

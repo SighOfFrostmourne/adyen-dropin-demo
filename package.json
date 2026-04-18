@@ -1,0 +1,24 @@
+{
+  "name": "adyen-dropin-demo",
+  "version": "1.0.0",
+  "description": "Adyen Drop-in Integration (Sessions Flow)",
+  "main": "src/server.js",
+  "scripts": {
+    "bundle": "esbuild src/client/checkout.js --bundle --outfile=public/checkout.js && esbuild src/client/result.js --bundle --outfile=public/result.js",
+    "dev": "npm run bundle && node --watch src/server.js",
+    "start": "npm run bundle && node src/server.js"
+  },
+  "dependencies": {
+    "@adyen/adyen-web": "^6.33.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.22.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
