@@ -1,6 +1,10 @@
 node_modules/
 .env
 .DS_Store
+public/checkout.js
+public/checkout.css
+public/result.js
+public/result.css
 Updated Adyen IE Skills Interview - Shanghai 2026.pdf
 AdyenDemo.zip
 AdyenDeom.pptx

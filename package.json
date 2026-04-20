@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "bundle": "esbuild src/client/checkout.js --bundle --outfile=public/checkout.js && esbuild src/client/result.js --bundle --outfile=public/result.js",
+    "prepare": "npm run bundle",
     "dev": "npm run bundle && node --watch src/server.js",
     "start": "npm run bundle && node src/server.js"
   },
