@@ -20,17 +20,17 @@ function log(type, message, data) {
 // ═════════════════════════════════════════════════════════════════════
 //  Amount / Currency helpers
 // ═════════════════════════════════════════════════════════════════════
-const currencySymbols = { CNY: '¥', EUR: '€', USD: '$', GBP: '£' };
-const currencyCountry  = { CNY: 'CN', EUR: 'NL', USD: 'US', GBP: 'GB' };
+const currencySymbols = { CNY: '¥', EUR: '€', USD: '$', GBP: '£', AUD: 'A$', SGD: 'S$', HKD: 'HK$' };
 
 function getAmountConfig() {
   const currency   = document.getElementById('currency-select').value;
+  const countryCode = document.getElementById('country-select').value;
   const majorUnits = parseFloat(document.getElementById('amount-input').value) || 0;
   return {
     currency,
-    value:      Math.round(majorUnits * 100),
-    countryCode: currencyCountry[currency] || 'US',
-    display:    `${currencySymbols[currency] || currency}${majorUnits.toFixed(2)}`,
+    countryCode,
+    value:   Math.round(majorUnits * 100),
+    display: `${currencySymbols[currency] || currency}${majorUnits.toFixed(2)}`,
   };
 }
 
@@ -42,6 +42,7 @@ function updatePriceDisplay() {
 
 document.getElementById('currency-select').addEventListener('change', updatePriceDisplay);
 document.getElementById('amount-input').addEventListener('input',  updatePriceDisplay);
+document.getElementById('country-select').addEventListener('change', updatePriceDisplay);
 updatePriceDisplay();
 
 // ═════════════════════════════════════════════════════════════════════
@@ -74,6 +75,9 @@ async function createSession() {
     sessionId: data.sessionId,
     environment: data.environment,
   });
+
+  sessionStorage.setItem('adyen_sessionId',   data.sessionId);
+  sessionStorage.setItem('adyen_sessionData', data.sessionData);
 
   return data;
 }
@@ -133,6 +137,12 @@ async function initCheckout() {
             placeholder: { color: '#64748b' },
             error:       { color: '#ffffff' },
             validated:   { color: '#ffffff' },
+          },
+        },
+        threeDS2: {
+          styles: {
+            base:  { color: '#ffffff', background: '#111827' },
+            label: { color: '#ffffff' },
           },
         },
       },

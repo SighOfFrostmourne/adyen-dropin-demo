@@ -32,7 +32,7 @@ const {
   PORT = 3000,
 } = process.env;
 
-const CHECKOUT_API_VERSION = "v71";
+const CHECKOUT_API_VERSION = "v72";
 const BASE_URL =
   ADYEN_ENV === "live"
     ? "https://checkout-live.adyen.com"
@@ -49,6 +49,7 @@ async function adyenRequest(endpoint, body) {
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": ADYEN_API_KEY,
+      "Idempotency-Key": uuidv4(),
     },
     body: JSON.stringify(body),
   });
@@ -86,14 +87,13 @@ app.post("/api/sessions", async (req, res) => {
       merchantAccount: ADYEN_MERCHANT_ACCOUNT,
       amount: amount || { currency: "CNY", value: 10000 }, // ¥100.00
       reference: orderRef,
-      returnUrl: `${req.protocol}://${req.get("host")}/result?sessionId={sessionId}&redirectResult={redirectResult}`,
+      returnUrl: `${req.protocol}://${req.get("host")}/result`,
       countryCode: countryCode || "CN",
       shopperLocale: shopperLocale || "zh_CN",
       shopperEmail: shopperEmail || "test@example.com",
       shopperReference: shopperReference || `shopper-${Date.now()}`,
       channel: "Web",
-      // Allow specific payment methods relevant to the demo
-      // Cards (with/without 3DS) + Alipay (redirect-based)
+      blockedPaymentMethods: ["paypal"],
     };
 
     const session = await adyenRequest("sessions", sessionRequest);
@@ -110,6 +110,22 @@ app.post("/api/sessions", async (req, res) => {
       error: err.message,
       details: err.details,
     });
+  }
+});
+
+// ─── POST /api/payments/details ──────────────────────────────────────
+// Finalizes a redirect-based payment (iDEAL, Alipay, etc.) by submitting
+// the redirectResult from the return URL to Adyen.
+app.post("/api/payments/details", async (req, res) => {
+  try {
+    const { redirectResult } = req.body;
+    const data = await adyenRequest("payments/details", {
+      details: { redirectResult },
+    });
+    res.json({ resultCode: data.resultCode, details: data });
+  } catch (err) {
+    console.error("payments/details failed:", err);
+    res.status(err.status || 500).json({ error: err.message, details: err.details });
   }
 });
 
@@ -147,13 +163,7 @@ app.get("/api/client-config", (req, res) => {
 
 // ─── Start ───────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`
-╔══════════════════════════════════════════════════════╗
-║   Adyen Drop-in Demo Server                         ║
-║   http://localhost:${PORT}                              ║
-║                                                      ║
-║   Environment: ${ADYEN_ENV.padEnd(37)}║
-║   Merchant:    ${ADYEN_MERCHANT_ACCOUNT.padEnd(37)}║
-╚══════════════════════════════════════════════════════╝
-  `);
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Environment : ${ADYEN_ENV || '(not set)'}`);
+  console.log(`Merchant    : ${ADYEN_MERCHANT_ACCOUNT || '(not set)'}`);
 });

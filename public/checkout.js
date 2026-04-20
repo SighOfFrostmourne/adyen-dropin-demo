@@ -20810,15 +20810,15 @@ Dropin: You support the payment method '${t111.type}' but this component has not
         logEl.prepend(li);
         console.log(`[${type}]`, message, data || "");
       }
-      var currencySymbols = { CNY: "\xA5", EUR: "\u20AC", USD: "$", GBP: "\xA3" };
-      var currencyCountry = { CNY: "CN", EUR: "NL", USD: "US", GBP: "GB" };
+      var currencySymbols = { CNY: "\xA5", EUR: "\u20AC", USD: "$", GBP: "\xA3", AUD: "A$", SGD: "S$", HKD: "HK$" };
       function getAmountConfig() {
         const currency = document.getElementById("currency-select").value;
+        const countryCode = document.getElementById("country-select").value;
         const majorUnits = parseFloat(document.getElementById("amount-input").value) || 0;
         return {
           currency,
+          countryCode,
           value: Math.round(majorUnits * 100),
-          countryCode: currencyCountry[currency] || "US",
           display: `${currencySymbols[currency] || currency}${majorUnits.toFixed(2)}`
         };
       }
@@ -20829,6 +20829,7 @@ Dropin: You support the payment method '${t111.type}' but this component has not
       }
       document.getElementById("currency-select").addEventListener("change", updatePriceDisplay);
       document.getElementById("amount-input").addEventListener("input", updatePriceDisplay);
+      document.getElementById("country-select").addEventListener("change", updatePriceDisplay);
       updatePriceDisplay();
       async function createSession() {
         const { currency, value, countryCode } = getAmountConfig();
@@ -20852,6 +20853,8 @@ Dropin: You support the payment method '${t111.type}' but this component has not
           sessionId: data.sessionId,
           environment: data.environment
         });
+        sessionStorage.setItem("adyen_sessionId", data.sessionId);
+        sessionStorage.setItem("adyen_sessionData", data.sessionData);
         return data;
       }
       async function initCheckout() {
@@ -20898,6 +20901,12 @@ Dropin: You support the payment method '${t111.type}' but this component has not
                   placeholder: { color: "#64748b" },
                   error: { color: "#ffffff" },
                   validated: { color: "#ffffff" }
+                }
+              },
+              threeDS2: {
+                styles: {
+                  base: { color: "#ffffff", background: "#111827" },
+                  label: { color: "#ffffff" }
                 }
               }
             }

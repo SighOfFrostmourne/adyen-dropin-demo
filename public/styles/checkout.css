@@ -115,6 +115,20 @@ body {
   font-size: 0.85rem;
 }
 .amount-row select { max-width: 100px; }
+.amount-selector select:not(.amount-row select) {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+}
+.amount-selector select:not(.amount-row select):focus {
+  outline: none;
+  border-color: var(--accent);
+}
 .amount-row select:focus,
 .amount-row input:focus {
   outline: none;
@@ -302,6 +316,24 @@ body {
   color: var(--text-muted) !important;
   font-size: 0.8rem !important;
   font-weight: 500 !important;
+}
+
+/* ── 3DS2 challenge wrapper ── */
+.adyen-checkout__threeds2,
+.adyen-checkout__threeds2__challenge,
+.adyen-checkout__threeds2__challenge--modal,
+.adyen-checkout__status,
+.adyen-checkout__status__icon,
+.adyen-checkout__status__text {
+  color: #ffffff !important;
+  background: var(--surface) !important;
+}
+.adyen-checkout__threeds2 *,
+.adyen-checkout__threeds2__challenge * {
+  color: #ffffff !important;
+}
+.adyen-checkout__spinner__wrapper .adyen-checkout__spinner__label {
+  color: #ffffff !important;
 }
 
 /* ── Log panel ── */
