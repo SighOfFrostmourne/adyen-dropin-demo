@@ -78,6 +78,8 @@ async function createSession() {
 
   sessionStorage.setItem('adyen_sessionId',   data.sessionId);
   sessionStorage.setItem('adyen_sessionData', data.sessionData);
+  sessionStorage.setItem('adyen_clientKey',   data.clientKey);
+  sessionStorage.setItem('adyen_environment', data.environment);
 
   return data;
 }
@@ -102,14 +104,14 @@ async function initCheckout() {
         sessionData,
       },
 
-      onPaymentCompleted: (result) => {
+      onPaymentCompleted: (result, component) => {
         log('event', 'onPaymentCompleted', result);
-        handlePaymentResult(result);
+        handlePaymentResult(result, component);
       },
 
-      onPaymentFailed: (result) => {
+      onPaymentFailed: (result, component) => {
         log('err', 'onPaymentFailed', result);
-        handlePaymentResult(result);
+        handlePaymentResult(result, component);
       },
 
       onError: (error) => {
@@ -161,14 +163,14 @@ async function initCheckout() {
 // ═════════════════════════════════════════════════════════════════════
 //  3. Handle payment result
 // ═════════════════════════════════════════════════════════════════════
-function handlePaymentResult(result) {
+function handlePaymentResult(result, component) {
   const resultCode = result.resultCode;
   log('event', `Payment result: ${resultCode}`, result);
 
   if (resultCode === 'Authorised') {
     log('event', '✅ Payment authorised!');
   } else if (resultCode === 'Refused') {
-    log('err', '❌ Payment refused.');
+    component.setStatus('error', { message: 'Payment refused. Please try a different payment method.' });
   } else if (resultCode === 'Pending' || resultCode === 'Received') {
     log('event', '⏳ Payment pending / received.');
   }

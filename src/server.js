@@ -1,22 +1,8 @@
-/**
- * Adyen Drop-in Integration - Backend Server
- * 
- * Architecture:
- *   Browser (Drop-in SDK) <---> This Server <---> Adyen API
- *
- * Flow:
- *   1. Client loads checkout page
- *   2. Client calls POST /api/sessions to create a payment session
- *   3. Server calls Adyen /sessions endpoint, returns session data
- *   4. Drop-in SDK uses sessionId + sessionData to render payment form
- *   5. SDK handles payment internally (including 3DS, redirects)
- *   6. On completion, client redirects to /result with sessionId
- *   7. Server can verify payment status via webhook (not implemented in demo)
- */
 require("dotenv").config();
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const path = require("path");
+const { Client, CheckoutAPI } = require("@adyen/api-library");
 
 const app = express();
 app.use(express.json());
@@ -32,71 +18,29 @@ const {
   PORT = 3000,
 } = process.env;
 
-const CHECKOUT_API_VERSION = "v72";
-const BASE_URL =
-  ADYEN_ENV === "live"
-    ? "https://checkout-live.adyen.com"
-    : "https://checkout-test.adyen.com";
-
-// ─── Helper: call Adyen API ──────────────────────────────────────────
-async function adyenRequest(endpoint, body) {
-  const url = `${BASE_URL}/${CHECKOUT_API_VERSION}/${endpoint}`;
-  console.log(`\n→ POST ${url}`);
-  console.log("  Request:", JSON.stringify(body, null, 2));
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-API-Key": ADYEN_API_KEY,
-      "Idempotency-Key": uuidv4(),
-    },
-    body: JSON.stringify(body),
-  });
-
-  const text = await res.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    const err = new Error(`Adyen API returned non-JSON response (${res.status}): ${text.slice(0, 200)}`);
-    err.status = res.status;
-    throw err;
-  }
-  console.log(`  Response (${res.status}):`, JSON.stringify(data, null, 2));
-
-  if (!res.ok) {
-    const err = new Error(data.message || "Adyen API error");
-    err.status = res.status;
-    err.details = data;
-    throw err;
-  }
-  return data;
-}
+// ─── Adyen Client ─────────────────────────────────────────────────────
+const client = new Client({
+  apiKey: ADYEN_API_KEY,
+  environment: ADYEN_ENV === "live" ? "LIVE" : "TEST",
+});
+const { PaymentsApi } = new CheckoutAPI(client);
 
 // ─── POST /api/sessions ──────────────────────────────────────────────
-// Creates a payment session on Adyen. The Drop-in SDK will use the
-// returned sessionId and sessionData to render the checkout UI and
-// handle the full payment lifecycle (including 3DS and redirects).
 app.post("/api/sessions", async (req, res) => {
   try {
-    const orderRef = uuidv4();
     const { amount, countryCode, shopperLocale, shopperEmail, shopperReference } = req.body;
 
-    const sessionRequest = {
+    const session = await PaymentsApi.sessions({
       merchantAccount: ADYEN_MERCHANT_ACCOUNT,
       amount: amount || { currency: "CNY", value: 10000 }, // ¥100.00
-      reference: orderRef,
+      reference: uuidv4(),
       returnUrl: `${req.protocol}://${req.get("host")}/result`,
       countryCode: countryCode || "CN",
       shopperLocale: shopperLocale || "zh_CN",
       shopperEmail: shopperEmail || "test@example.com",
       shopperReference: shopperReference || `shopper-${Date.now()}`,
       channel: "Web",
-      blockedPaymentMethods: ["paypal"],
-    };
-
-    const session = await adyenRequest("sessions", sessionRequest);
+    });
 
     res.json({
       sessionId: session.id,
@@ -106,45 +50,16 @@ app.post("/api/sessions", async (req, res) => {
     });
   } catch (err) {
     console.error("Session creation failed:", err);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.details,
-    });
+    res.status(err.statusCode || 500).json({ error: err.message });
   }
 });
 
-// ─── POST /api/payments/details ──────────────────────────────────────
-// Finalizes a redirect-based payment (iDEAL, Alipay, etc.) by submitting
-// the redirectResult from the return URL to Adyen.
-app.post("/api/payments/details", async (req, res) => {
-  try {
-    const { redirectResult } = req.body;
-    const data = await adyenRequest("payments/details", {
-      details: { redirectResult },
-    });
-    res.json({ resultCode: data.resultCode, details: data });
-  } catch (err) {
-    console.error("payments/details failed:", err);
-    res.status(err.status || 500).json({ error: err.message, details: err.details });
-  }
-});
-
-// ─── GET /api/sessions/:id (optional status check) ──────────────────
-// In production, payment results should be verified via webhooks.
-// This endpoint is for demo/debugging purposes only.
-app.get("/api/sessions/:id", async (req, res) => {
-  try {
-    // Sessions flow doesn't have a direct "get session" endpoint.
-    // Payment result is handled by the SDK's onPaymentCompleted callback.
-    // In production, you'd rely on webhooks for authoritative results.
-    res.json({
-      message:
-        "In production, use webhooks (AUTHORISATION, REFUND, etc.) to track payment status. The SDK's onPaymentCompleted provides the client-side result.",
-      sessionId: req.params.id,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// ─── GET /api/sessions/:id (demo only) ───────────────────────────────
+app.get("/api/sessions/:id", (req, res) => {
+  res.json({
+    message: "In production, use webhooks (AUTHORISATION, REFUND, etc.) to track payment status.",
+    sessionId: req.params.id,
+  });
 });
 
 // ─── GET /result ─────────────────────────────────────────────────────
@@ -152,8 +67,7 @@ app.get("/result", (req, res) => {
   res.sendFile(path.join(__dirname, '../result.html'));
 });
 
-// ─── GET /client-config ──────────────────────────────────────────────
-// Expose non-secret client configuration
+// ─── GET /api/client-config ──────────────────────────────────────────
 app.get("/api/client-config", (req, res) => {
   res.json({
     clientKey: ADYEN_CLIENT_KEY,
@@ -164,6 +78,6 @@ app.get("/api/client-config", (req, res) => {
 // ─── Start ───────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`Environment : ${ADYEN_ENV || '(not set)'}`);
+  console.log(`Environment : ${ADYEN_ENV}`);
   console.log(`Merchant    : ${ADYEN_MERCHANT_ACCOUNT || '(not set)'}`);
 });

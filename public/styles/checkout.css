@@ -332,6 +332,14 @@ body {
 .adyen-checkout__threeds2__challenge * {
   color: #ffffff !important;
 }
+.adyen-checkout__modal,
+.adyen-checkout__modal-wrapper {
+  background-color: var(--surface) !important;
+  color: #ffffff !important;
+}
+.adyen-checkout__modal * {
+  color: #ffffff !important;
+}
 .adyen-checkout__spinner__wrapper .adyen-checkout__spinner__label {
   color: #ffffff !important;
 }
