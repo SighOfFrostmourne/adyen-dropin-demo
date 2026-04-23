@@ -1,50 +1,57 @@
 # Adyen Drop-in Demo (Sessions Flow)
 
-A working integration of **Adyen's Drop-in** component using the **Sessions flow**, built with Node.js (Express) and vanilla JavaScript. No frontend framework, no Vite — just esbuild for bundling and Express for serving.
+A working integration of **Adyen's Drop-in** component using the **Sessions flow**, built with Node.js (Express) and vanilla JavaScript. No frontend framework — just esbuild for bundling and Express for serving.
 
 ## Architecture
 
 ```
 ┌─────────────────────────┐      ┌─────────────────────┐      ┌──────────────────┐
 │   Browser (Frontend)    │      │   Node.js Server    │      │   Adyen API      │
-│                         │      │   (Express :3000)   │      │   (v72)          │
+│                         │      │   (Express :3000)   │      │                  │
 │  1. Shopper clicks      │      │                     │      │                  │
 │     "Confirm & Pay"     │      │                     │      │                  │
-│  2. POST /api/sessions ─┼──────▶ 3. POST /sessions  ─┼──────▶                  │
-│                         │      │    + Idempotency-Key│◀─────┤ 4. sessionId +   │
+│  2. POST /api/sessions ─┼──────▶ 3. PaymentsApi     ─┼──────▶                  │
+│                         │      │    .sessions()      │◀─────┤ 4. sessionId +   │
 │  5. Drop-in mounts  ◀───┼──────┤ Return session data │      │    sessionData   │
 │     (Adyen Web v6)      │      │                     │      │                  │
 │  6. Shopper pays        │      │                     │      │                  │
 │  7. SDK submits ────────┼──────┼─────────────────────┼──────▶ 8. Authorise     │
 │     payment directly    │      │                     │      │                  │
-│  9. onPaymentCompleted  │      │ 10. Webhook ◀───────┼──────┤ AUTHORISATION    │
-│     callback fires      │      │     (not in demo)   │      │ notification     │
+│  9. onPaymentCompleted /│      │ 10. Webhook ◀───────┼──────┤ AUTHORISATION    │
+│     onPaymentFailed     │      │     (not in demo)   │      │ notification     │
+│     callback fires      │      │                     │      │                  │
 │                         │      │                     │      │                  │
 │  [Redirect payments]    │      │                     │      │                  │
-│  11. POST /api/payments/│      │                     │      │                  │
-│      details ───────────┼──────▶ 12. POST /payments/ ┼──────▶                  │
-│                         │      │     details         │◀─────┤ 13. resultCode   │
-└──────────────────────────┘      └─────────────────────┘      └──────────────────┘
+│  11. Redirect back with │      │                     │      │                  │
+│      redirectResult     │      │                     │      │                  │
+│  12. Drop-in calls      │      │                     │      │                  │
+│      handleAdditional   ┼──────┼─────────────────────┼──────▶ 13. resultCode  │
+│      Details() directly │      │                     │◀─────┤                  │
+└─────────────────────────┘      └─────────────────────┘      └──────────────────┘
 ```
 
 ## Key Concepts
 
 ### Sessions Flow
-The **Sessions flow** simplifies integration by combining session creation and payment handling into a single API call. The SDK manages the entire payment lifecycle:
+The **Sessions flow** simplifies integration — the server creates one session and the SDK manages the entire payment lifecycle:
 
-1. **Server** creates a session via `POST /v72/sessions`
+1. **Server** creates a session via `@adyen/api-library`'s `PaymentsApi.sessions()`
 2. **SDK** receives `sessionId` + `sessionData` and renders payment methods
 3. **SDK** handles payment submission, 3DS challenges, and redirects internally
-4. **Server** receives the final result via webhook (production) or the SDK's `onPaymentCompleted` callback (client-side)
+4. **Callbacks** (`onPaymentCompleted`, `onPaymentFailed`) fire on the client with the final result
 
 ### Redirect Payments
-For redirect-based methods (iDEAL, Alipay), after the shopper returns the browser calls `POST /api/payments/details` with the `redirectResult`. The server submits it to Adyen and returns the `resultCode` to display on the result page.
+For redirect-based methods (iDEAL, Alipay), after the shopper returns to `/result`, the Drop-in is remounted with the original session. It calls `handleAdditionalDetails()` directly — no server round-trip needed. The SDK finalizes the payment and triggers `onPaymentCompleted` or `onPaymentFailed`.
+
+### Card Payment Results
+Card payments (including 3DS) are handled entirely on the checkout page:
+- **Authorised / Pending** — logged in the debug panel
+- **Refused** — Drop-in displays an inline error via `component.setStatus('error')`
 
 ### Payment Methods Demonstrated
 - **Cards** — with and without 3D Secure (3DS2 challenge)
 - **iDEAL** — redirect-based, requires EUR + Netherlands
 - **Alipay** — redirect-based, requires CNY + China
-- **PayPal** — blocked by default (requires PayPal Sandbox credentials in Customer Area)
 
 ## Setup
 
@@ -53,17 +60,14 @@ For redirect-based methods (iDEAL, Alipay), after the shopper returns the browse
 git clone https://github.com/SighOfFrostmourne/adyen-dropin-demo.git
 cd adyen-dropin-demo
 
-# 2. Install dependencies
+# 2. Install dependencies (client bundles are built automatically via `prepare`)
 npm install
 
 # 3. Configure environment variables
 cp .env.example .env
 # Edit .env with your Adyen test credentials
 
-# 4. Bundle the client-side code
-npm run bundle
-
-# 5. Start the server
+# 4. Start the server
 npm start
 # or for development (auto-restarts on server changes):
 npm run dev
@@ -78,21 +82,21 @@ Open [http://localhost:3000](http://localhost:3000)
 ```
 adyen-dropin-demo/
 ├── src/
-│   ├── server.js              # Express server — API routes, Adyen calls
+│   ├── server.js              # Express server + Adyen API via @adyen/api-library
 │   └── client/
-│       ├── checkout.js        # Checkout page logic (source)
-│       └── result.js          # Result page logic (source)
+│       ├── checkout.js        # Checkout page: session creation, Drop-in mount
+│       └── result.js          # Result page: redirect result handling
 ├── public/
-│   ├── checkout.js            # Bundled checkout script (esbuild output)
-│   ├── checkout.css           # Bundled Adyen SDK styles
-│   ├── result.js              # Bundled result script (esbuild output)
-│   ├── result.css             # Bundled result styles
+│   ├── checkout.js            # Bundled checkout script (esbuild output, gitignored)
+│   ├── checkout.css           # Bundled Adyen SDK styles (gitignored)
+│   ├── result.js              # Bundled result script (esbuild output, gitignored)
+│   ├── result.css             # Bundled result styles (gitignored)
 │   └── styles/
 │       ├── base.css           # Shared CSS variables and reset
 │       ├── checkout.css       # Checkout page styles + Drop-in overrides
 │       └── result.css         # Result page styles
 ├── index.html                 # Checkout page
-├── result.html                # Redirect result page
+├── result.html                # Result page (redirect return + card results)
 ├── .env                       # Adyen credentials (gitignored)
 ├── .env.example               # Credential template
 ├── package.json
@@ -112,10 +116,9 @@ adyen-dropin-demo/
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/` | Serves checkout page |
-| `GET` | `/result` | Serves redirect result page |
-| `POST` | `/api/sessions` | Creates Adyen payment session |
-| `POST` | `/api/payments/details` | Finalizes redirect payment (iDEAL, Alipay) |
-| `GET` | `/api/client-config` | Returns `clientKey` + `environment` for result page |
+| `GET` | `/result` | Serves result page |
+| `POST` | `/api/sessions` | Creates Adyen payment session via `@adyen/api-library` |
+| `GET` | `/api/client-config` | Returns `clientKey` + `environment` |
 
 ## Testing Card Numbers
 
